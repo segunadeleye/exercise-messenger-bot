@@ -6,3 +6,4 @@
 /storage/*
 .byebug_history
 /config/master.key
+/.env
