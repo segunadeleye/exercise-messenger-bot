@@ -35,5 +35,9 @@ module MessengerExerciseBot
     # Auto-load the bot and its subdirectories
     config.paths.add File.join('app', 'bot'), glob: File.join('**', '*.rb')
     config.autoload_paths += Dir[Rails.root.join('app', 'bot', '*')]
+
+    # Auto-load services
+    config.paths.add File.join('app', 'services'), glob: File.join('**', '*.rb')
+    config.autoload_paths += Dir[Rails.root.join('app', 'services', '*')]
   end
 end
