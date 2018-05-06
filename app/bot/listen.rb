@@ -5,5 +5,9 @@ include Facebook::Messenger
 Facebook::Messenger::Subscriptions.subscribe(access_token: ENV["ACCESS_TOKEN"])
 
 Bot.on :message do |message|
-  message.reply(text: "Welcome to the home of your Personal Trainer! Hope you are pumped up for your workout sessions? I'm sure you are :)")
+  if CreateUser.new(message.sender['id']).call[:new_user]
+    message.reply(text: "Your account has been created successully")
+  else
+    message.reply(text: "Your account could not be created. It already exists!")
+  end
 end
