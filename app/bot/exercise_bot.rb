@@ -47,12 +47,38 @@ class ExerciseBot
         confirm_start_workout(message)
       else
         message.reply(text: 'Welcome Back Jedi! Good to have you back')
-        # check_incomplete_workout(message)
+        check_incomplete_workout(message)
       end
     end
 
     def get_user(sender_id)
       CreateUser.new(sender_id).call
+    end
+
+    def check_incomplete_workout(message)
+      if @user[:user].has_pending_workout_session?
+        confirm_continue_workout(message)
+      else
+        confirm_start_workout(message)
+      end
+    end
+
+    def confirm_continue_workout(message)
+      message.reply({
+        text: 'Would you like to continue from where you stopped?',
+        quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
+      })
+
+      Bot.on :message do |message|
+        if message.quick_reply == 'YES'
+          message.reply(text: "Let's get started!!!")
+
+          listen
+        else
+          @user[:user].workout_sessions.pending.first.update(status: WorkoutSession::STATUS[:incomplete])
+          confirm_start_workout(message)
+        end
+      end
     end
 
     def confirm_start_workout(message)
