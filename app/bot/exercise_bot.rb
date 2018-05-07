@@ -41,7 +41,8 @@ class ExerciseBot
     end
 
     def handle_initial_message(message)
-      @user = get_user(message.sender['id'])
+      @user = CreateUser.call(message.sender['id'])
+
       if @user[:new_user]
         message.reply(text: 'Welcome Padwan! Your account has been created.')
         confirm_start_workout(message)
@@ -49,10 +50,6 @@ class ExerciseBot
         message.reply(text: 'Welcome Back Jedi! Good to have you back')
         check_incomplete_workout(message)
       end
-    end
-
-    def get_user(sender_id)
-      CreateUser.new(sender_id).call
     end
 
     def check_incomplete_workout(message)

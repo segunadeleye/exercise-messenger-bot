@@ -4,6 +4,10 @@ class CreateUser
     @sender_id = sender_id
   end
 
+  def self.call(*args)
+    new(*args).call
+  end
+
   def call
     {
       new_user: user.nil?,
@@ -16,7 +20,7 @@ private
   attr_reader :sender_id
 
   def find_or_create
-    user.nil? ?  User.create(sender_id: sender_id) : user
+    user.nil? ? User.create(sender_id: sender_id) : user
   end
 
   def user
