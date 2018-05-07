@@ -16,6 +16,16 @@ describe ExerciseBot do
       content_type: 'text',
       title: 'Done',
       payload: 'DONE'
+    },
+    start: {
+      content_type: 'text',
+      title: 'Start',
+      payload: 'START'
+    },
+    skip: {
+      content_type: 'text',
+      title: 'Skip',
+      payload: 'SKIP'
     }
   } }
 

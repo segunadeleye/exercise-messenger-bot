@@ -20,6 +20,16 @@ class ExerciseBot
       content_type: 'text',
       title: 'Done',
       payload: 'DONE'
+    },
+    start: {
+      content_type: 'text',
+      title: 'Start',
+      payload: 'START'
+    },
+    skip: {
+      content_type: 'text',
+      title: 'Skip',
+      payload: 'SKIP'
     }
   }
 
@@ -55,6 +65,7 @@ class ExerciseBot
           select_workout(message)
         else
           message.reply(text: 'Alright! But you can come back whenever you feel like working out.')
+
           listen
         end
       end
@@ -84,13 +95,14 @@ class ExerciseBot
 
     def send_exercise_information(message, routine)
       exercise = routine.exercise
-      message.reply(text: "Your first exercise is #{ exercise.name }. #{ exercise.picture }")
+      message.reply(text: "Your next exercise is #{ exercise.name }")
       message.reply(
         attachment: {
           type: 'image',
           payload: { url: exercise.picture }
         }
       )
+      message.reply(text: "Set: #{ routine.set }. Reps: #{ routine.repetition }")
       message.reply(text: "Purpose: #{ exercise.purpose }")
     end
 
@@ -112,26 +124,22 @@ class ExerciseBot
 
     def confirm_start_exercise(message, routine)
       message.reply({
-        text: 'Are you Ready?',
-        quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
+        text: 'Would you like to start the exercise?',
+        quick_replies: [QUICK_REPLIES[:start], QUICK_REPLIES[:skip]]
       })
 
       Bot.on :message do |message|
-        if message.quick_reply == 'YES'
-          message.reply(text: 'Here are the details of your exercise.')
-          message.reply(text: "Set: #{ routine.set }. Reps: #{ routine.repetition }")
+        if message.quick_reply == 'START'
           confirm_exercise_done(message, routine)
         else
-          message.reply(text: 'Alright! But you can come back whenever you feel like working out.')
-
-          listen
+          check_for_next_routine(message, routine)
         end
       end
     end
 
     def confirm_exercise_done(message, routine)
       message.reply({
-        text: 'Kinly notify me when you are done',
+        text: 'Kindly notify me when you are done',
         quick_replies: [QUICK_REPLIES[:done]]
       })
 
