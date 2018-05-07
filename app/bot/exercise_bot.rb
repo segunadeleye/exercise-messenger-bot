@@ -117,6 +117,7 @@ class ExerciseBot
     end
 
     def initiate_exercise(message, routine)
+      @performed_routine = PerformedRoutine.create(workout_session: @workout_session, routine: routine)
       send_exercise_information(message, routine)
       confirm_view_video_instruction(message, routine)
     end
@@ -160,6 +161,7 @@ class ExerciseBot
         if message.quick_reply == 'START'
           confirm_exercise_done(message, routine)
         else
+          @performed_routine.update(status: PerformedRoutine::STATUS[:skipped])
           check_for_next_routine(message, routine)
         end
       end
@@ -173,6 +175,7 @@ class ExerciseBot
 
       Bot.on :message do |message|
         if message.quick_reply == 'DONE'
+          @performed_routine.update(status: PerformedRoutine::STATUS[:done])
           check_for_next_routine(message, routine)
         else
           listen

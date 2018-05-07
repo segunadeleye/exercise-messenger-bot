@@ -13,4 +13,8 @@ describe PerformedRoutine, type: :model do
     it { should belong_to(:workout_session) }
     it { should belong_to(:routine) }
   end
+
+  describe 'STATUS' do
+    it { expect(PerformedRoutine::STATUS).to eq({ skipped: 0, done: 1 }) }
+  end
 end
