@@ -73,7 +73,7 @@ class ExerciseBot
       })
 
       Bot.on :message do |message|
-        first_routine = Workout.find(message.quick_reply).routines.order(:position).first
+        first_routine = Workout.find(message.quick_reply).routines.first
         inform_about_exercise(message, first_routine)
         ask_for_instructional_video(message, first_routine)
       end
@@ -117,15 +117,16 @@ class ExerciseBot
         if message.quick_reply == 'YES'
           message.reply(text: 'Here are the details of your exercise.')
           message.reply(text: "Set: #{ routine.set }. Reps: #{ routine.repetition }")
-          notify_when_done(message)
+          notify_when_done(message, routine)
         else
           message.reply(text: 'Alright! But you can come back whenever you feel like working out.')
+
           listen
         end
       end
     end
 
-    def notify_when_done(message)
+    def notify_when_done(message, routine)
       message.reply({
         text: 'Kinly notify me when you are done',
         quick_replies: [QUICK_REPLIES[:done]]
@@ -133,8 +134,21 @@ class ExerciseBot
 
       Bot.on :message do |message|
         if message.quick_reply == 'DONE'
-          message.reply(text: 'Congratulations! You just completed your first exercise.')
+          check_for_next_routine(message, routine)
+        else
+          listen
         end
+      end
+    end
+
+    def check_for_next_routine(message, routine)
+      next_routine = routine.next_routine
+      if next_routine.present?
+        inform_about_exercise(message, next_routine)
+        ask_for_instructional_video(message, next_routine)
+      else
+        message.reply(text: 'Congratulations! You just completed your first exercise.')
+
         listen
       end
     end
