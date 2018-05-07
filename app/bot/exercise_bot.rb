@@ -26,13 +26,8 @@ class ExerciseBot
   class << self
     def listen
       Bot.on :message do |message|
-        begin
-          handle_initial_message(message)
-          ask_for_workout_start(message)
-        rescue => exception
-          p exception.message
-          message.reply(text: 'Something went wrong. Please start again')
-        end
+        handle_initial_message(message)
+        ask_for_workout_start(message)
       end
     end
 
