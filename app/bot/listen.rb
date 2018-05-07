@@ -46,6 +46,12 @@ Bot.on :message do |message|
           first_routine = Workout.find(workout_id).routines.order(:position).first
           first_exercise = first_routine.exercise
           message.reply(text: "Your first exercise is #{ first_exercise.name }. #{ first_exercise.picture }")
+          message.reply(
+            attachment: {
+              type: 'image',
+              payload: { url: first_exercise.picture }
+            }
+          )
           message.reply(text: "Purpose: #{ first_exercise.purpose }")
           message.reply({
             text: 'Would you want to see an instruction video for this exercise?',
@@ -65,6 +71,7 @@ Bot.on :message do |message|
 
           Bot.on :message do |message|
             if message.quick_reply == 'YES'
+              message.reply(text: 'Click the link below.')
               message.reply(text: first_exercise.video)
             end
 
