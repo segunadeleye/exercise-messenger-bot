@@ -37,16 +37,17 @@ class ExerciseBot
     def listen
       Bot.on :message do |message|
         handle_initial_message(message)
-        confirm_start_workout(message)
       end
     end
 
     def handle_initial_message(message)
-      user = get_user(message.sender['id'])
-      if user[:new_user]
-        message.reply(text: "Your account has been created successully")
+      @user = get_user(message.sender['id'])
+      if @user[:new_user]
+        message.reply(text: 'Welcome Padwan! Your account has been created.')
+        confirm_start_workout(message)
       else
-        message.reply(text: "Your account could not be created. It already exists!")
+        message.reply(text: 'Welcome Back Jedi! Good to have you back')
+        # check_incomplete_workout(message)
       end
     end
 
@@ -84,6 +85,7 @@ class ExerciseBot
       })
 
       Bot.on :message do |message|
+        @workout_session = WorkoutSession.create(user_id: @user[:user].id, workout_id: message.quick_reply)
         initiate_exercise(message, Workout.find(message.quick_reply).routines.first)
       end
     end
@@ -157,6 +159,7 @@ class ExerciseBot
       if next_routine.present?
         initiate_exercise(message, next_routine)
       else
+        @workout_session.update(status: WorkoutSession::STATUS[:complete])
         message.reply(text: 'Congratulations! You just completed your first exercise.')
 
         listen
