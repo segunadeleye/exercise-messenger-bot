@@ -53,11 +53,15 @@ class ExerciseBot
     end
 
     def check_incomplete_workout(message)
-      if @user[:user].has_pending_workout_session?
+      if user.has_pending_workout_session?
         confirm_continue_workout(message)
       else
         confirm_start_workout(message)
       end
+    end
+
+    def user
+      @user[:user]
     end
 
     def confirm_continue_workout(message)
@@ -67,7 +71,8 @@ class ExerciseBot
       })
 
       Bot.on :message do |message|
-        workout_session = @user[:user].workout_sessions.pending.first
+        workout_session = user.workout_sessions.pending.first
+
         if message.quick_reply == 'YES'
           message.reply(text: "Let's get started!!!")
           initiate_exercise(message, workout_session.performed_routines.find_by(status: nil).routine)
@@ -108,7 +113,7 @@ class ExerciseBot
       })
 
       Bot.on :message do |message|
-        @workout_session = WorkoutSession.create(user_id: @user[:user].id, workout_id: message.quick_reply)
+        @workout_session = WorkoutSession.create(user: user, workout_id: message.quick_reply)
         initiate_exercise(message, Workout.find(message.quick_reply).routines.first)
       end
     end
