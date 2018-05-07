@@ -27,7 +27,7 @@ class ExerciseBot
     def listen
       Bot.on :message do |message|
         handle_initial_message(message)
-        ask_for_workout_start(message)
+        confirm_start_workout(message)
       end
     end
 
@@ -44,7 +44,7 @@ class ExerciseBot
       CreateUser.new(sender_id).call
     end
 
-    def ask_for_workout_start(message)
+    def confirm_start_workout(message)
       message.reply({
         text: 'Hi Human! Would you like to start a workout session?',
         quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
@@ -73,13 +73,16 @@ class ExerciseBot
       })
 
       Bot.on :message do |message|
-        first_routine = Workout.find(message.quick_reply).routines.first
-        inform_about_exercise(message, first_routine)
-        ask_for_instructional_video(message, first_routine)
+        initiate_exercise(message, Workout.find(message.quick_reply).routines.first)
       end
     end
 
-    def inform_about_exercise(message, routine)
+    def initiate_exercise(message, routine)
+      send_exercise_information(message, routine)
+      confirm_view_video_instruction(message, routine)
+    end
+
+    def send_exercise_information(message, routine)
       exercise = routine.exercise
       message.reply(text: "Your first exercise is #{ exercise.name }. #{ exercise.picture }")
       message.reply(
@@ -91,7 +94,7 @@ class ExerciseBot
       message.reply(text: "Purpose: #{ exercise.purpose }")
     end
 
-    def ask_for_instructional_video(message, routine)
+    def confirm_view_video_instruction(message, routine)
       message.reply({
         text: 'Would you want to see an instruction video for this exercise?',
         quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
@@ -103,11 +106,11 @@ class ExerciseBot
           message.reply(text: routine.exercise.video)
         end
 
-        ask_ready_to_start(message, routine)
+        confirm_start_exercise(message, routine)
       end
     end
 
-    def ask_ready_to_start(message, routine)
+    def confirm_start_exercise(message, routine)
       message.reply({
         text: 'Are you Ready?',
         quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
@@ -117,7 +120,7 @@ class ExerciseBot
         if message.quick_reply == 'YES'
           message.reply(text: 'Here are the details of your exercise.')
           message.reply(text: "Set: #{ routine.set }. Reps: #{ routine.repetition }")
-          notify_when_done(message, routine)
+          confirm_exercise_done(message, routine)
         else
           message.reply(text: 'Alright! But you can come back whenever you feel like working out.')
 
@@ -126,7 +129,7 @@ class ExerciseBot
       end
     end
 
-    def notify_when_done(message, routine)
+    def confirm_exercise_done(message, routine)
       message.reply({
         text: 'Kinly notify me when you are done',
         quick_replies: [QUICK_REPLIES[:done]]
@@ -144,8 +147,7 @@ class ExerciseBot
     def check_for_next_routine(message, routine)
       next_routine = routine.next_routine
       if next_routine.present?
-        inform_about_exercise(message, next_routine)
-        ask_for_instructional_video(message, next_routine)
+        initiate_exercise(message, next_routine)
       else
         message.reply(text: 'Congratulations! You just completed your first exercise.')
 
