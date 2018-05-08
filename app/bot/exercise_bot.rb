@@ -65,10 +65,7 @@ class ExerciseBot
     end
 
     def confirm_continue_workout(message)
-      message.reply({
-        text: 'Would you like to continue from where you stopped?',
-        quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
-      })
+      quick_reply(message, 'Would you like to continue from where you stopped?')
 
       Bot.on :message do |message|
         @workout_session = user.workout_sessions.pending.first
@@ -84,10 +81,7 @@ class ExerciseBot
     end
 
     def confirm_start_workout(message)
-      message.reply({
-        text: 'Hi Human! Would you like to start a workout session?',
-        quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
-      })
+      quick_reply(message, 'Hi Human! Would you like to start a workout session?')
 
       Bot.on :message do |message|
         if message.quick_reply == 'YES'
@@ -99,16 +93,15 @@ class ExerciseBot
     end
 
     def select_workout(message)
-      message.reply({
-        text: 'Please select a workout',
-        quick_replies: Workout.all.map do |workout|
-          {
-            content_type: 'text',
-            title: workout.name,
-            payload: workout.id
-          }
-        end
-      })
+      quick_replies = Workout.all.map do |workout|
+        {
+          content_type: 'text',
+          title: workout.name,
+          payload: workout.id
+        }
+      end
+
+      quick_reply(message, 'Please select a workout', quick_replies)
 
       Bot.on :message do |message|
         @workout_session = WorkoutSession.create(user: user, workout_id: message.quick_reply)
@@ -135,10 +128,7 @@ class ExerciseBot
     end
 
     def confirm_view_video_instruction(message, routine)
-      message.reply({
-        text: 'Would you want to see an instruction video for this exercise?',
-        quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
-      })
+      quick_reply(message, 'Would you want to see an instruction video for this exercise?')
 
       Bot.on :message do |message|
         if message.quick_reply == 'YES'
@@ -151,10 +141,7 @@ class ExerciseBot
     end
 
     def confirm_start_exercise(message, routine)
-      message.reply({
-        text: 'Would you like to start the exercise?',
-        quick_replies: [QUICK_REPLIES[:start], QUICK_REPLIES[:skip]]
-      })
+      quick_reply(message, 'Would you like to start the exercise?', [QUICK_REPLIES[:start], QUICK_REPLIES[:skip]])
 
       Bot.on :message do |message|
         if message.quick_reply == 'START'
@@ -167,10 +154,7 @@ class ExerciseBot
     end
 
     def confirm_exercise_done(message, routine)
-      message.reply({
-        text: 'Kindly notify me when you are done',
-        quick_replies: [QUICK_REPLIES[:done]]
-      })
+      quick_reply(message, 'Kindly notify me when you are done', [QUICK_REPLIES[:done]])
 
       Bot.on :message do |message|
         if message.quick_reply == 'DONE'
@@ -195,10 +179,7 @@ class ExerciseBot
     end
 
     def confirm_proceed_to_next_exercise(message, routine)
-      message.reply({
-        text: "Are you ready for the next exercise -- #{ routine.exercise.name }",
-        quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
-      })
+      quick_reply(message, "Are you ready for the next exercise -- #{ routine.exercise.name }")
 
       Bot.on :message do |message|
         if message.quick_reply == 'YES'
@@ -210,10 +191,7 @@ class ExerciseBot
     end
 
     def confirm_stop_workout_session(message, routine)
-      message.reply({
-        text: "Do you want to stop the workout?",
-        quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
-      })
+      quick_reply(message, 'Do you want to stop the workout?')
 
       Bot.on :message do |message|
         if message.quick_reply == 'YES'
@@ -227,6 +205,13 @@ class ExerciseBot
     def end_conversation
       yield if block_given?
       listen
+    end
+
+    def quick_reply(message, text, quick_replies = nil)
+      message.reply({
+        text: text,
+        quick_replies: quick_replies || [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
+      })
     end
   end
 
