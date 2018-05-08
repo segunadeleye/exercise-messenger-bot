@@ -1,11 +1,8 @@
 class CreateUser
+  include Service
 
   def initialize(sender_id)
     @sender_id = sender_id
-  end
-
-  def self.call(*args)
-    new(*args).call
   end
 
   def call
