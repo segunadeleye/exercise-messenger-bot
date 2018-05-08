@@ -187,12 +187,44 @@ class ExerciseBot
     def check_for_next_routine(message, routine)
       next_routine = routine.next_routine
       if next_routine.present?
-        initiate_exercise(message, next_routine)
+        confirm_proceed_to_next_exercise(message, next_routine)
       else
         @workout_session.update(status: WorkoutSession::STATUS[:complete])
         message.reply(text: 'Congratulations! You just completed your first exercise.')
 
         listen
+      end
+    end
+
+    def confirm_proceed_to_next_exercise(message, routine)
+      message.reply({
+        text: "Are you ready for the next exercise -- #{ routine.exercise.name }",
+        quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
+      })
+
+      Bot.on :message do |message|
+        if message.quick_reply == 'YES'
+          initiate_exercise(message, routine)
+        else
+          confirm_stop_workout_session(message, routine)
+        end
+      end
+    end
+
+    def confirm_stop_workout_session(message, routine)
+      message.reply({
+        text: "Do you want to stop the workout?",
+        quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
+      })
+
+      Bot.on :message do |message|
+        if message.quick_reply == 'YES'
+          message.reply(text: 'Goodbye! You can always start from where you left off.')
+
+          listen
+        else
+          initiate_exercise(message, routine)
+        end
       end
     end
   end
