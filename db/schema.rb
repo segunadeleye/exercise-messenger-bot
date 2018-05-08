@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2018_05_06_181905) do
+ActiveRecord::Schema.define(version: 2018_05_07_164036) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -22,6 +22,17 @@ ActiveRecord::Schema.define(version: 2018_05_06_181905) do
     t.text "purpose"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "performed_routines", force: :cascade do |t|
+    t.bigint "workout_session_id", null: false
+    t.bigint "routine_id", null: false
+    t.integer "status"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["routine_id"], name: "index_performed_routines_on_routine_id"
+    t.index ["status"], name: "index_performed_routines_on_status"
+    t.index ["workout_session_id"], name: "index_performed_routines_on_workout_session_id"
   end
 
   create_table "routines", force: :cascade do |t|
@@ -46,6 +57,17 @@ ActiveRecord::Schema.define(version: 2018_05_06_181905) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["sender_id"], name: "index_users_on_sender_id"
+  end
+
+  create_table "workout_sessions", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "workout_id", null: false
+    t.integer "status", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["status"], name: "index_workout_sessions_on_status"
+    t.index ["user_id"], name: "index_workout_sessions_on_user_id"
+    t.index ["workout_id"], name: "index_workout_sessions_on_workout_id"
   end
 
   create_table "workouts", force: :cascade do |t|

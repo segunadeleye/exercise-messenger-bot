@@ -37,21 +37,50 @@ class ExerciseBot
     def listen
       Bot.on :message do |message|
         handle_initial_message(message)
-        confirm_start_workout(message)
       end
     end
 
     def handle_initial_message(message)
-      user = get_user(message.sender['id'])
-      if user[:new_user]
-        message.reply(text: "Your account has been created successully")
+      @user = CreateUser.call(message.sender['id'])
+
+      if @user[:new_user]
+        message.reply(text: 'Welcome Padwan! Your account has been created.')
+        confirm_start_workout(message)
       else
-        message.reply(text: "Your account could not be created. It already exists!")
+        message.reply(text: 'Welcome Back Jedi! Good to have you back')
+        check_incomplete_workout(message)
       end
     end
 
-    def get_user(sender_id)
-      CreateUser.new(sender_id).call
+    def check_incomplete_workout(message)
+      if user.has_pending_workout_session?
+        confirm_continue_workout(message)
+      else
+        confirm_start_workout(message)
+      end
+    end
+
+    def user
+      @user[:user]
+    end
+
+    def confirm_continue_workout(message)
+      message.reply({
+        text: 'Would you like to continue from where you stopped?',
+        quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
+      })
+
+      Bot.on :message do |message|
+        workout_session = user.workout_sessions.pending.first
+
+        if message.quick_reply == 'YES'
+          message.reply(text: "Let's get started!!!")
+          initiate_exercise(message, workout_session.performed_routines.find_by(status: nil).routine)
+        else
+          workout_session.update(status: WorkoutSession::STATUS[:incomplete])
+          confirm_start_workout(message)
+        end
+      end
     end
 
     def confirm_start_workout(message)
@@ -84,11 +113,13 @@ class ExerciseBot
       })
 
       Bot.on :message do |message|
+        @workout_session = WorkoutSession.create(user: user, workout_id: message.quick_reply)
         initiate_exercise(message, Workout.find(message.quick_reply).routines.first)
       end
     end
 
     def initiate_exercise(message, routine)
+      @performed_routine = PerformedRoutine.create(workout_session: @workout_session, routine: routine)
       send_exercise_information(message, routine)
       confirm_view_video_instruction(message, routine)
     end
@@ -132,6 +163,7 @@ class ExerciseBot
         if message.quick_reply == 'START'
           confirm_exercise_done(message, routine)
         else
+          @performed_routine.update(status: PerformedRoutine::STATUS[:skipped])
           check_for_next_routine(message, routine)
         end
       end
@@ -145,6 +177,7 @@ class ExerciseBot
 
       Bot.on :message do |message|
         if message.quick_reply == 'DONE'
+          @performed_routine.update(status: PerformedRoutine::STATUS[:done])
           check_for_next_routine(message, routine)
         else
           listen
@@ -157,6 +190,7 @@ class ExerciseBot
       if next_routine.present?
         initiate_exercise(message, next_routine)
       else
+        @workout_session.update(status: WorkoutSession::STATUS[:complete])
         message.reply(text: 'Congratulations! You just completed your first exercise.')
 
         listen
