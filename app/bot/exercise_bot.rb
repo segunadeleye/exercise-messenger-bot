@@ -71,13 +71,13 @@ class ExerciseBot
       })
 
       Bot.on :message do |message|
-        workout_session = user.workout_sessions.pending.first
+        @workout_session = user.workout_sessions.pending.first
 
         if message.quick_reply == 'YES'
           message.reply(text: "Let's get started!!!")
-          initiate_exercise(message, workout_session.performed_routines.find_by(status: nil).routine)
+          initiate_exercise(message, GetPendingRoutine.call(@workout_session))
         else
-          workout_session.update(status: WorkoutSession::STATUS[:incomplete])
+          @workout_session.update(status: WorkoutSession::STATUS[:incomplete])
           confirm_start_workout(message)
         end
       end
@@ -93,9 +93,7 @@ class ExerciseBot
         if message.quick_reply == 'YES'
           select_workout(message)
         else
-          message.reply(text: 'Alright! But you can come back whenever you feel like working out.')
-
-          listen
+          end_conversation { message.reply(text: 'Alright! But you can come back whenever you feel like working out.') }
         end
       end
     end
@@ -119,7 +117,6 @@ class ExerciseBot
     end
 
     def initiate_exercise(message, routine)
-      @performed_routine = PerformedRoutine.create(workout_session: @workout_session, routine: routine)
       send_exercise_information(message, routine)
       confirm_view_video_instruction(message, routine)
     end
@@ -163,7 +160,7 @@ class ExerciseBot
         if message.quick_reply == 'START'
           confirm_exercise_done(message, routine)
         else
-          @performed_routine.update(status: PerformedRoutine::STATUS[:skipped])
+          PerformedRoutine.create(workout_session: @workout_session, routine: routine, status: PerformedRoutine::STATUS[:skipped])
           check_for_next_routine(message, routine)
         end
       end
@@ -177,10 +174,10 @@ class ExerciseBot
 
       Bot.on :message do |message|
         if message.quick_reply == 'DONE'
-          @performed_routine.update(status: PerformedRoutine::STATUS[:done])
+          PerformedRoutine.create(workout_session: @workout_session, routine: routine, status: PerformedRoutine::STATUS[:done])
           check_for_next_routine(message, routine)
         else
-          listen
+          end_conversation
         end
       end
     end
@@ -188,13 +185,48 @@ class ExerciseBot
     def check_for_next_routine(message, routine)
       next_routine = routine.next_routine
       if next_routine.present?
-        initiate_exercise(message, next_routine)
+        confirm_proceed_to_next_exercise(message, next_routine)
       else
-        @workout_session.update(status: WorkoutSession::STATUS[:complete])
-        message.reply(text: 'Congratulations! You just completed your first exercise.')
-
-        listen
+        end_conversation do
+          @workout_session.update(status: WorkoutSession::STATUS[:complete])
+          message.reply(text: 'Congratulations! You just completed your first exercise.')
+        end
       end
+    end
+
+    def confirm_proceed_to_next_exercise(message, routine)
+      message.reply({
+        text: "Are you ready for the next exercise -- #{ routine.exercise.name }",
+        quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
+      })
+
+      Bot.on :message do |message|
+        if message.quick_reply == 'YES'
+          initiate_exercise(message, routine)
+        else
+          confirm_stop_workout_session(message, routine)
+        end
+      end
+    end
+
+    def confirm_stop_workout_session(message, routine)
+      message.reply({
+        text: "Do you want to stop the workout?",
+        quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
+      })
+
+      Bot.on :message do |message|
+        if message.quick_reply == 'YES'
+          end_conversation { message.reply(text: 'Goodbye! You can always start from where you left off.') }
+        else
+          initiate_exercise(message, routine)
+        end
+      end
+    end
+
+    def end_conversation
+      yield if block_given?
+      listen
     end
   end
 
