@@ -1,6 +1,10 @@
 require 'rails_helper'
 
 describe GetPendingRoutine do
+  let(:done) { PerformedRoutine::STATUS[:done] }
+  let(:skipped) { PerformedRoutine::STATUS[:skipped] }
+  let(:workout_session_status) { WorkoutSession::STATUS }
+
   let!(:user) { create(:user) }
   let!(:workout) { create(:workout) }
   let!(:exercises) { create_list(:exercise, 3) }
@@ -8,19 +12,19 @@ describe GetPendingRoutine do
   let!(:workout_session_1) { create(:workout_session, user: user, workout: workout) }
   let!(:workout_session_2) { create(:workout_session, user: user, workout: workout) }
   let!(:workout_session_3) { create(:workout_session, user: user, workout: workout) }
-  let!(:complete_workout_session) { create(:workout_session, user: user, workout: workout, status: 1) }
-  let!(:incomplete_workout_session) { create(:workout_session, user: user, workout: workout, status: 2) }
+  let!(:complete_workout_session) { create(:workout_session, user: user, workout: workout, status: workout_session_status[:complete]) }
+  let!(:incomplete_workout_session) { create(:workout_session, user: user, workout: workout, status: workout_session_status[:incomplete]) }
 
   let!(:routine_1) { create(:routine, workout: workout, exercise: exercises.first) }
   let!(:routine_2) { create(:routine, workout: workout, exercise: exercises.second) }
   let!(:routine_3) { create(:routine, workout: workout, exercise: exercises.third) }
 
-  let!(:performed_routine_1) { create(:performed_routine, workout_session: workout_session_1, routine: routine_1, status: 0) }
-  let!(:performed_routine_2) { create(:performed_routine, workout_session: workout_session_1, routine: routine_2, status: 1) }
+  let!(:performed_routine_1) { create(:performed_routine, workout_session: workout_session_1, routine: routine_1, status: skipped) }
+  let!(:performed_routine_2) { create(:performed_routine, workout_session: workout_session_1, routine: routine_2, status: done) }
 
-  let!(:performed_routine_3) { create(:performed_routine, workout_session: workout_session_3, routine: routine_1, status: 0) }
-  let!(:performed_routine_4) { create(:performed_routine, workout_session: workout_session_3, routine: routine_2, status: 1) }
-  let!(:performed_routine_5) { create(:performed_routine, workout_session: workout_session_3, routine: routine_3, status: 1) }
+  let!(:performed_routine_3) { create(:performed_routine, workout_session: workout_session_3, routine: routine_1, status: skipped) }
+  let!(:performed_routine_4) { create(:performed_routine, workout_session: workout_session_3, routine: routine_2, status: done) }
+  let!(:performed_routine_5) { create(:performed_routine, workout_session: workout_session_3, routine: routine_3, status: done) }
 
   describe '#call' do
     context 'has pending routines' do
