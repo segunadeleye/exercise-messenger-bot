@@ -93,9 +93,7 @@ class ExerciseBot
         if message.quick_reply == 'YES'
           select_workout(message)
         else
-          message.reply(text: 'Alright! But you can come back whenever you feel like working out.')
-
-          listen
+          end_conversation { message.reply(text: 'Alright! But you can come back whenever you feel like working out.') }
         end
       end
     end
@@ -179,7 +177,7 @@ class ExerciseBot
           PerformedRoutine.create(workout_session: @workout_session, routine: routine, status: PerformedRoutine::STATUS[:done])
           check_for_next_routine(message, routine)
         else
-          listen
+          end_conversation
         end
       end
     end
@@ -189,10 +187,10 @@ class ExerciseBot
       if next_routine.present?
         confirm_proceed_to_next_exercise(message, next_routine)
       else
-        @workout_session.update(status: WorkoutSession::STATUS[:complete])
-        message.reply(text: 'Congratulations! You just completed your first exercise.')
-
-        listen
+        end_conversation do
+          @workout_session.update(status: WorkoutSession::STATUS[:complete])
+          message.reply(text: 'Congratulations! You just completed your first exercise.')
+        end
       end
     end
 
@@ -219,13 +217,16 @@ class ExerciseBot
 
       Bot.on :message do |message|
         if message.quick_reply == 'YES'
-          message.reply(text: 'Goodbye! You can always start from where you left off.')
-
-          listen
+          end_conversation { message.reply(text: 'Goodbye! You can always start from where you left off.') }
         else
           initiate_exercise(message, routine)
         end
       end
+    end
+
+    def end_conversation
+      yield if block_given?
+      listen
     end
   end
 
