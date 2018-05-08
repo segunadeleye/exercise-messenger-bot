@@ -71,13 +71,13 @@ class ExerciseBot
       })
 
       Bot.on :message do |message|
-        workout_session = user.workout_sessions.pending.first
+        @workout_session = user.workout_sessions.pending.first
 
         if message.quick_reply == 'YES'
           message.reply(text: "Let's get started!!!")
-          initiate_exercise(message, workout_session.performed_routines.find_by(status: nil).routine)
+          initiate_exercise(message, GetPendingRoutine.call(@workout_session))
         else
-          workout_session.update(status: WorkoutSession::STATUS[:incomplete])
+          @workout_session.update(status: WorkoutSession::STATUS[:incomplete])
           confirm_start_workout(message)
         end
       end

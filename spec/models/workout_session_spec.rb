@@ -12,6 +12,8 @@ describe WorkoutSession, type: :model do
   describe 'associations' do
     it { should belong_to(:user) }
     it { should belong_to(:workout) }
+    it { should have_many(:performed_routines) }
+    it { should have_many(:routines).through(:performed_routines) }
   end
 
   describe 'STATUS' do
