@@ -35,13 +35,26 @@ class ExerciseBot
 
   class << self
     def listen
+      p 'Listening'
       Bot.on :message do |message|
-        handle_initial_message(message)
+        p 'Message Received'
+        pp commands
+        command = commands[message.sender['id']]
+        pp command
+        if command
+          p 'Executing Next Command!!!'
+          args = [message] + command[1]
+          method(command[0]).call(*args)
+        else
+          p 'Initializing Conversation'
+          handle_initial_message(message)
+        end
       end
     end
 
     def handle_initial_message(message)
       @user = CreateUser.call(message.sender['id'])
+      commands[message.sender['id']] = {}
 
       if @user[:new_user]
         message.reply(text: 'Welcome Padwan! Your account has been created.')
@@ -69,17 +82,18 @@ class ExerciseBot
         text: 'Would you like to continue from where you stopped?',
         quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
       })
+      next_command message.sender['id'], :handle_continue_workout
+    end
 
-      Bot.on :message do |message|
-        @workout_session = user.workout_sessions.pending.first
+    def handle_continue_workout(message)
+      @workout_session = user.workout_sessions.pending.first
 
-        if message.quick_reply == 'YES'
-          message.reply(text: "Let's get started!!!")
-          initiate_exercise(message, GetPendingRoutine.call(@workout_session))
-        else
-          @workout_session.update(status: WorkoutSession::STATUS[:incomplete])
-          confirm_start_workout(message)
-        end
+      if message.quick_reply == 'YES'
+        message.reply(text: "Let's get started!!!")
+        initiate_exercise(message, GetPendingRoutine.call(@workout_session))
+      else
+        @workout_session.update(status: WorkoutSession::STATUS[:incomplete])
+        confirm_start_workout(message)
       end
     end
 
@@ -88,12 +102,15 @@ class ExerciseBot
         text: 'Hi Human! Would you like to start a workout session?',
         quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
       })
+      next_command message.sender['id'], :handle_start_workout
+    end
 
-      Bot.on :message do |message|
-        if message.quick_reply == 'YES'
-          select_workout(message)
-        else
-          end_conversation { message.reply(text: 'Alright! But you can come back whenever you feel like working out.') }
+    def handle_start_workout(message)
+      if message.quick_reply == 'YES'
+        select_workout(message)
+      else
+        end_conversation(message.sender['id']) do
+          message.reply(text: 'Alright! But you can come back whenever you feel like working out.')
         end
       end
     end
@@ -109,11 +126,12 @@ class ExerciseBot
           }
         end
       })
+      next_command message.sender['id'], :handle_select_workout
+    end
 
-      Bot.on :message do |message|
-        @workout_session = WorkoutSession.create(user: user, workout_id: message.quick_reply)
-        initiate_exercise(message, Workout.find(message.quick_reply).routines.first)
-      end
+    def handle_select_workout(message)
+      @workout_session = WorkoutSession.create(user: user, workout_id: message.quick_reply)
+      initiate_exercise(message, Workout.find(message.quick_reply).routines.first)
     end
 
     def initiate_exercise(message, routine)
@@ -140,14 +158,16 @@ class ExerciseBot
         quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
       })
 
-      Bot.on :message do |message|
-        if message.quick_reply == 'YES'
-          message.reply(text: 'Click the link below.')
-          message.reply(text: routine.exercise.video)
-        end
+      next_command message.sender['id'], :handle_view_video_instruction, [routine]
+    end
 
-        confirm_start_exercise(message, routine)
+    def handle_view_video_instruction(message, routine)
+      if message.quick_reply == 'YES'
+        message.reply(text: 'Click the link below.')
+        message.reply(text: routine.exercise.video)
       end
+
+      confirm_start_exercise(message, routine)
     end
 
     def confirm_start_exercise(message, routine)
@@ -155,14 +175,15 @@ class ExerciseBot
         text: 'Would you like to start the exercise?',
         quick_replies: [QUICK_REPLIES[:start], QUICK_REPLIES[:skip]]
       })
+      next_command message.sender['id'], :handle_start_exercise, [routine]
+    end
 
-      Bot.on :message do |message|
-        if message.quick_reply == 'START'
-          confirm_exercise_done(message, routine)
-        else
-          PerformedRoutine.create(workout_session: @workout_session, routine: routine, status: PerformedRoutine::STATUS[:skipped])
-          check_for_next_routine(message, routine)
-        end
+    def handle_start_exercise(message, routine)
+      if message.quick_reply == 'START'
+        confirm_exercise_done(message, routine)
+      else
+        PerformedRoutine.create(workout_session: @workout_session, routine: routine, status: PerformedRoutine::STATUS[:skipped])
+        check_for_next_routine(message, routine)
       end
     end
 
@@ -171,14 +192,15 @@ class ExerciseBot
         text: 'Kindly notify me when you are done',
         quick_replies: [QUICK_REPLIES[:done]]
       })
+      next_command message.sender['id'], :handle_exercise_done, [routine]
+    end
 
-      Bot.on :message do |message|
-        if message.quick_reply == 'DONE'
-          PerformedRoutine.create(workout_session: @workout_session, routine: routine, status: PerformedRoutine::STATUS[:done])
-          check_for_next_routine(message, routine)
-        else
-          end_conversation
-        end
+    def handle_exercise_done(message, routine)
+      if message.quick_reply == 'DONE'
+        PerformedRoutine.create(workout_session: @workout_session, routine: routine, status: PerformedRoutine::STATUS[:done])
+        check_for_next_routine(message, routine)
+      else
+        end_conversation(message.sender['id'])
       end
     end
 
@@ -187,7 +209,7 @@ class ExerciseBot
       if next_routine.present?
         confirm_proceed_to_next_exercise(message, next_routine)
       else
-        end_conversation do
+        end_conversation(message.sender['id']) do
           @workout_session.update(status: WorkoutSession::STATUS[:complete])
           message.reply(text: 'Congratulations! You just completed your first exercise.')
         end
@@ -199,13 +221,14 @@ class ExerciseBot
         text: "Are you ready for the next exercise -- #{ routine.exercise.name }",
         quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
       })
+      next_command message.sender['id'], :handle_proceed_to_next_exercise, [routine]
+    end
 
-      Bot.on :message do |message|
-        if message.quick_reply == 'YES'
-          initiate_exercise(message, routine)
-        else
-          confirm_stop_workout_session(message, routine)
-        end
+    def handle_proceed_to_next_exercise(message, routine)
+      if message.quick_reply == 'YES'
+        initiate_exercise(message, routine)
+      else
+        confirm_stop_workout_session(message, routine)
       end
     end
 
@@ -215,17 +238,35 @@ class ExerciseBot
         quick_replies: [QUICK_REPLIES[:yes], QUICK_REPLIES[:no]]
       })
 
-      Bot.on :message do |message|
-        if message.quick_reply == 'YES'
-          end_conversation { message.reply(text: 'Goodbye! You can always start from where you left off.') }
-        else
-          initiate_exercise(message, routine)
+      next_command message.sender['id'], :handle_stop_workout_session, [routine]
+    end
+
+    def handle_stop_workout_session(message, routine)
+      if message.quick_reply == 'YES'
+        end_conversation(message.sender['id']) do
+          message.reply(text: 'Goodbye! You can always start from where you left off.')
         end
+      else
+        initiate_exercise(message, routine)
       end
     end
 
-    def end_conversation
+    def end_conversation(sender_id)
       yield if block_given?
+      p 'Deleting Sender ID'
+      commands.delete(sender_id)
+      pp commands
+      listen
+    end
+
+    def commands
+      @@commands ||= {}
+    end
+
+    def next_command(sender_id, command, args = [])
+      p "Adding command #{command} with args #{args} for user ==> #{sender_id}"
+      commands[sender_id] = [command, args]
+      pp commands
       listen
     end
   end
